@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎲 Kocok Nama</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    color: #fff;
+  }
+
+  .container {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    text-align: center;
+  }
+
+  h1 { margin-bottom: 8px; font-size: 28px; }
+  .subtitle { opacity: 0.8; margin-bottom: 20px; font-size: 14px; }
+
+  .slot {
+    background: #000;
+    border-radius: 15px;
+    padding: 40px 20px;
+    margin: 20px 0;
+    font-size: 32px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px #00ffcc;
+    color: #00ffcc;
+    border: 3px solid #00ffcc;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+
+  .slot.spinning { animation: glow 0.5s infinite alternate; }
+
+  .slot.winner {
+    color: #ffd700;
+    border-color: #ffd700;
+    text-shadow: 0 0 30px #ffd700;
+    animation: pulse 0.6s infinite alternate;
+  }
+
+  @keyframes glow {
+    from { box-shadow: 0 0 10px #00ffcc; }
+    to { box-shadow: 0 0 30px #00ffcc, inset 0 0 20px #00ffcc; }
+  }
+
+  @keyframes pulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.03); }
+  }
+
+  button {
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    border: none;
+    color: #fff;
+    padding: 14px 30px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin: 5px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  }
+
+  button:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-reset { background: linear-gradient(135deg, #ff6a00, #ee0979); }
+
+  .panel { text-align: left; margin-top: 25px; }
+
+  .panel h3 { font-size: 14px; margin-bottom: 8px; opacity: 0.9; }
+
+  textarea {
+    width: 100%;
+    min-height: 100px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(0,0,0,0.3);
+    color: #fff;
+    padding: 12px;
+    font-size: 14px;
+    resize: vertical;
+  }
+
+  textarea::placeholder { color: rgba(255,255,255,0.5); }
+
+  .info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-top: 10px;
+    opacity: 0.85;
+  }
+
+  .winners {
+    margin-top: 15px;
+    max-height: 130px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: left;
+    font-size: 14px;
+  }
+
+  .winners li {
+    list-style: none;
+    padding: 6px 10px;
+    border-bottom: 1px dashed rgba(255,255,255,0.2);
+  }
+
+  .winners li:last-child { border-bottom: none; }
+
+  .confetti {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  @keyframes fall {
+    to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎲 Kocok Nama</h1>
+  <p class="subtitle">Masukkan nama (satu per baris), lalu klik MULAI!</p>
+
+  <div class="slot" id="slot">???</div>
+
+  <div>
+    <button id="btnSpin">🎲 MULAI UNDIAN</button>
+    <button id="btnReset" class="btn-reset">🔄 Reset</button>
+  </div>
+
+  <div class="panel">
+    <h3>📝 Daftar Nama:</h3>
+    <textarea id="nameInput" placeholder="Isi nama yang ingin diundi..."></textarea>
+    <div class="info">
+      <span>Total: <b id="totalNames">0</b> nama</span>
+      <span>Sisa: <b id="remainingNames">0</b> nama</span>
+    </div>
+
+    <h3 style="margin-top:15px;">🏆 Pemenang:</h3>
+    <ul class="winners" id="winnerList">
+      <li style="opacity:0.6;">Belum ada pemenang...</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  const slot = document.getElementById('slot');
+  const btnSpin = document.getElementById('btnSpin');
+  const btnReset = document.getElementById('btnReset');
+  const nameInput = document.getElementById('nameInput');
+  const totalNames = document.getElementById('totalNames');
+  const remainingNames = document.getElementById('remainingNames');
+  const winnerList = document.getElementById('winnerList');
+
+  let names = [];
+  let winners = [];
+  let isSpinning = false;
+
+  function parseNames() {
+    names = nameInput.value.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+    updateInfo();
+  }
+
+  function updateInfo() {
+    totalNames.textContent = names.length;
+    remainingNames.textContent = names.length - winners.length;
+  }
+
+  function renderWinners() {
+    if (winners.length === 0) {
+      winnerList.innerHTML = '<li style="opacity:0.6;">Belum ada pemenang...</li>';
+      return;
+    }
+    winnerList.innerHTML = winners
+      .map((w, i) => `<li>🏆 <b>${i + 1}.</b> ${w}</li>`)
+      .join('');
+    winnerList.scrollTop = winnerList.scrollHeight;
+  }
+
+  function confetti() {
+    const colors = ['#ffd700', '#ff6a00', '#00ffcc', '#ff00ff', '#00c6ff'];
+    for (let i = 0; i < 60; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-10px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+      c.style.animation = `fall ${2 + Math.random() * 2}s linear forwards`;
+      c.style.animationDelay = Math.random() * 0.5 + 's';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 4500);
+    }
+  }
+
+  async function spin() {
+    if (isSpinning) return;
+
+    const sisa = names.filter(n => !winners.includes(n));
+    if (sisa.length === 0) {
+      slot.textContent = 'SELESAI!';
+      slot.classList.add('winner');
+      return;
+    }
+
+    isSpinning = true;
+    btnSpin.disabled = true;
+    slot.classList.remove('winner');
+    slot.classList.add('spinning');
+
+    const startTime = Date.now();
+    const duration = 3000;
+
+    while (Date.now() - startTime < duration) {
+      const randomName = sisa[Math.floor(Math.random() * sisa.length)];
+      slot.textContent = randomName;
+      await new Promise(r => setTimeout(r, 60 + Math.random() * 40));
+    }
+
+    const winner = sisa[Math.floor(Math.random() * sisa.length)];
+
+    for (let i = 0; i < 5; i++) {
+      const randomName = sisa[Math.floor(Math.random() * sisa.length)];
+      slot.textContent = randomName;
+      await new Promise(r => setTimeout(r, 200 + i * 100));
+    }
+
+    slot.textContent = winner;
+    slot.classList.remove('spinning');
+    slot.classList.add('winner');
+
+    winners.push(winner);
+    renderWinners();
+    updateInfo();
+    confetti();
+
+    isSpinning = false;
+    btnSpin.disabled = false;
+  }
+
+  function reset() {
+    if (!confirm('Reset semua data pemenang?')) return;
+    winners = [];
+    slot.textContent = '???';
+    slot.classList.remove('winner', 'spinning');
+    renderWinners();
+    updateInfo();
+  }
+
+  nameInput.addEventListener('input', parseNames);
+  btnSpin.addEventListener('click', spin);
+  btnReset.addEventListener('click', reset);
+
+  parseNames();
+  renderWinners();
+</script>
+</body>
+</html>
